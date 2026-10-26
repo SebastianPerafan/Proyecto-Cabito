@@ -3,6 +3,7 @@ package modelo;
 import java.util.EnumMap;
 import java.util.LinkedList;
 import java.util.Map;
+import minijuegos.ResultadoMinijuego;
 
 public class Partida {
 
@@ -131,16 +132,24 @@ public class Partida {
     }
 
     public boolean alternarEquipadoAccesorio(String idAccesorio) {
+        Item objetivo = null;
         for (Item prenda : armario) {
             if (prenda.getId().equalsIgnoreCase(idAccesorio)) {
-                if (!prenda.isDesbloqueado()) {
-                    return false;
-                }
-                prenda.setEquipado(!prenda.isEquipado());
-                return true;
+                objetivo = prenda;
+                break;
             }
         }
-        return false;
+        if (objetivo == null || !objetivo.isDesbloqueado()) {
+            return false;
+        }
+        boolean nuevoEstado = !objetivo.isEquipado();
+        if (nuevoEstado) {
+            for (Item prenda : armario) {
+                prenda.setEquipado(false);
+            }
+        }
+        objetivo.setEquipado(nuevoEstado);
+        return true;
     }
 
     public void agregarMonedas(int cantidad) {
@@ -150,6 +159,62 @@ public class Partida {
     public void registrarVictoriaMinijuego() {
         this.victoriasMinijuegos++;
         verificarLogros();
+    }
+
+    public boolean iniciarMinijuego() {
+        if (!this.cabito.puedeJugarMinijuego()) {
+            return false;
+        }
+        this.cabito.setEnergia(this.cabito.getEnergia() - 15);
+        this.cabito.actualizarEstadoAutomatico();
+        return true;
+    }
+
+    public void aplicarResultadoMinijuego(ResultadoMinijuego resultado) {
+        if (resultado == null) {
+            return;
+        }
+        agregarMonedas(resultado.recompensaMonedas());
+        if (resultado.otorgaManzana()) {
+            this.consumibles.add(Item.crearConsumible(
+                    "MANZANA", "Manzana", "+20 Hambre",
+                    CategoriaItem.COMIDA, 10,
+                    20, 0, 0, 0, 0, 0, 0, "item_manzana.png"));
+        }
+        if (resultado.esVictoria()) {
+            this.victoriasMinijuegos++;
+        }
+        if (resultado.recompensaXp() > 0) {
+            ganarExperiencia(resultado.recompensaXp());
+        } else {
+            verificarLogros();
+        }
+    }
+
+    public boolean iniciarExploracion() {
+        if (!this.cabito.puedeExplorar()) {
+            return false;
+        }
+        this.cabito.setEnergia(this.cabito.getEnergia() - 10);
+        this.cabito.actualizarEstadoAutomatico();
+        return true;
+    }
+
+    public boolean procesarResultadoEvento(Evento evento, int indiceSeleccionado) {
+        if (evento == null) {
+            return false;
+        }
+        boolean acertado = evento.evaluarRespuesta(indiceSeleccionado);
+        if (acertado) {
+            agregarMonedas(evento.getRecompensaMonedas());
+            this.cabito.setInteligencia(this.cabito.getInteligencia() + evento.getBonoInteligencia());
+            this.cabito.actualizarEstadoAutomatico();
+            ganarExperiencia(evento.getRecompensaXp());
+        } else {
+            agregarMonedas(-evento.getPenalizacionMonedas());
+            ganarExperiencia(evento.getConsolacionXp());
+        }
+        return acertado;
     }
 
     public boolean estaMundoDesbloqueado(Mundo mundo) {

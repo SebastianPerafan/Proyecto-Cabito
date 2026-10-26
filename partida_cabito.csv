@@ -1,0 +1,16 @@
+TIPO_REGISTRO,CAMPO_1,CAMPO_2,CAMPO_3,CAMPO_4,CAMPO_5,CAMPO_6,CAMPO_7,CAMPO_8,CAMPO_9,CAMPO_10,CAMPO_11,CAMPO_12,CAMPO_13
+PARTIDA,Cabito,5,1000,1000,PLAZOLETA,5,3
+CABITO,80,100,80,80,100,80,FELIZ
+MUNDO,PLAZOLETA,true
+MUNDO,BIBLIOTECA,true
+MUNDO,AUDITORIO,true
+LOGRO,LOGRO_1,Primíparo Tadeísta,Alcanza el Nivel 1 de experiencia.,true,ACC_CARNE
+LOGRO,LOGRO_2,Cliente Frecuente,Realiza 5 compras en la Tienda de la Universidad.,true,ACC_GORRA
+LOGRO,LOGRO_3,Mente Brillante,Alcanza 80 puntos de Inteligencia.,true,ACC_GAFAS
+LOGRO,LOGRO_4,Campeón Universitario,Acumula 3 victorias en cualquier minijuego.,true,ACC_BUZO
+LOGRO,LOGRO_5,Orgullo Tadeísta,Alcanza el Nivel 4 de experiencia.,true,ACC_BIRRETE
+ARMARIO,ACC_CARNE,Carné Estudiantil,Se desbloquea al alcanzar el Nivel 1.,true,false,acc_carne.png,115,120,0.35
+ARMARIO,ACC_GORRA,Gorra de la Universidad,Se desbloquea al comprar 5 veces en la Tienda.,true,false,acc_gorra.png,60,-55,0.60
+ARMARIO,ACC_GAFAS,Gafas Intelectuales,Se desbloquea al llegar a 80 de Inteligencia.,true,false,acc_gafas.png,75,10,0.50
+ARMARIO,ACC_BUZO,Buzo Tadeísta,Se desbloquea al acumular 3 Victorias en cualquier minijuego.,true,false,acc_buzo.png,57,90,0.80
+ARMARIO,ACC_BIRRETE,Birrete de Grado,Se desbloquea al alcanzar el Nivel 4.,true,false,acc_birrete.png,60,-55,0.60
