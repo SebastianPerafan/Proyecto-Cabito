@@ -34,7 +34,30 @@ public class GestorArchivos {
         this.rutaArchivo = rutaArchivo;
     }
 
-    public void guardarPartida(Partida partida) throws IOException {
+    public static boolean guardarPartida(Partida partida) {
+        try {
+            new GestorArchivos().guardarPartidaEnDisco(partida);
+            return true;
+        } catch (IOException | IllegalArgumentException e) {
+            System.err.println("Error al guardar la partida: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static Partida cargarPartida() {
+        GestorArchivos gestor = new GestorArchivos();
+        if (!gestor.existeArchivoGuardado()) {
+            return null;
+        }
+        try {
+            return gestor.cargarPartidaDesdeDisco();
+        } catch (IOException e) {
+            System.err.println("Error al cargar la partida: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public void guardarPartidaEnDisco(Partida partida) throws IOException {
         if (partida == null) {
             throw new IllegalArgumentException("La partida a guardar no puede ser nula.");
         }
@@ -122,14 +145,17 @@ public class GestorArchivos {
                         limpiarTexto(prenda.getDescripcion()),
                         String.valueOf(prenda.isDesbloqueado()),
                         String.valueOf(prenda.isEquipado()),
-                        limpiarTexto(prenda.getNombreImagen())
+                        limpiarTexto(prenda.getNombreImagen()),
+                        String.valueOf(prenda.getOffsetX()),
+                        String.valueOf(prenda.getOffsetY()),
+                        String.valueOf(prenda.getEscala())
                 ));
                 writer.newLine();
             }
         }
     }
 
-    public Partida cargarPartida() throws IOException {
+    public Partida cargarPartidaDesdeDisco() throws IOException {
         if (!existeArchivoGuardado()) {
             throw new IOException("No existe el archivo de partida en: " + rutaArchivo.toAbsolutePath());
         }
@@ -276,15 +302,51 @@ public class GestorArchivos {
         if (col.length < 7) {
             return;
         }
+        String idPrenda = col[1].trim();
+        int offsetXPorDefecto = obtenerOffsetXPorDefecto(idPrenda);
+        int offsetYPorDefecto = obtenerOffsetYPorDefecto(idPrenda);
+        int offsetX = (col.length >= 8) ? parseIntSeguro(col[7], offsetXPorDefecto) : offsetXPorDefecto;
+        int offsetY = (col.length >= 9) ? parseIntSeguro(col[8], offsetYPorDefecto) : offsetYPorDefecto;
+
+        double escala = 1.0;
+        if (col.length >= 10 && !col[9].isBlank()) {
+            try {
+                escala = Double.parseDouble(col[9].trim());
+            } catch (NumberFormatException e) {
+                escala = 1.0;
+            }
+        }
+
         Item accesorio = Item.crearAccesorio(
-                col[1].trim(),
+                idPrenda,
                 col[2].trim(),
                 col[3].trim(),
                 Boolean.parseBoolean(col[4].trim()),
                 Boolean.parseBoolean(col[5].trim()),
-                col[6].trim()
+                col[6].trim(),
+                offsetX,
+                offsetY,
+                escala
         );
         partida.getArmario().add(accesorio);
+    }
+
+    private int obtenerOffsetXPorDefecto(String idAccesorio) {
+        for (Item base : Item.crearArmarioInicial()) {
+            if (base.getId().equalsIgnoreCase(idAccesorio)) {
+                return base.getOffsetX();
+            }
+        }
+        return 0;
+    }
+
+    private int obtenerOffsetYPorDefecto(String idAccesorio) {
+        for (Item base : Item.crearArmarioInicial()) {
+            if (base.getId().equalsIgnoreCase(idAccesorio)) {
+                return base.getOffsetY();
+            }
+        }
+        return 0;
     }
 
     private String unirCampos(String... campos) {
