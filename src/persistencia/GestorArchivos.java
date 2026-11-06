@@ -2,11 +2,18 @@ package persistencia;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import modelo.Cabito;
 import modelo.CategoriaItem;
 import modelo.EstadoCabito;
@@ -17,24 +24,104 @@ import modelo.Partida;
 
 public class GestorArchivos {
 
+    public static final String PREFIJO_ARCHIVO = "partida_";
+    public static final String EXTENSION_ARCHIVO = ".csv";
     public static final String ARCHIVO_POR_DEFECTO = "partida_cabito.csv";
     private static final String SEPARADOR = ",";
 
-    private final Path rutaArchivo;
+    private Path rutaArchivo;
 
     public GestorArchivos() {
-        this(Paths.get(ARCHIVO_POR_DEFECTO));
+        this(resolverRutaArchivo(obtenerNombreArchivo("cabito")));
     }
 
-    public GestorArchivos(String ruta) {
-        this(Paths.get(ruta));
+    public GestorArchivos(String rutaONombreUsuario) {
+        if (rutaONombreUsuario != null && rutaONombreUsuario.toLowerCase().endsWith(EXTENSION_ARCHIVO)) {
+            this.rutaArchivo = resolverRutaArchivo(rutaONombreUsuario);
+        } else {
+            this.rutaArchivo = resolverRutaArchivo(obtenerNombreArchivo(rutaONombreUsuario));
+        }
     }
 
     public GestorArchivos(Path rutaArchivo) {
         this.rutaArchivo = rutaArchivo;
     }
 
+    public static String normalizarNombreUsuario(String nombreUsuario) {
+        if (nombreUsuario == null || nombreUsuario.isBlank()) {
+            return "jugador";
+        }
+        String sinAcentos = Normalizer.normalize(nombreUsuario.trim(), Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        String limpio = sinAcentos.toLowerCase().replaceAll("[^a-z0-9_-]", "");
+        return limpio.isEmpty() ? "jugador" : limpio;
+    }
+
+    public static String obtenerNombreArchivo(String nombreUsuario) {
+        String nombreLimpio = normalizarNombreUsuario(nombreUsuario);
+        return PREFIJO_ARCHIVO + nombreLimpio + EXTENSION_ARCHIVO;
+    }
+
+    private static Path obtenerDirectorioBase() {
+        Path subcarpetaProyecto = Paths.get("Proyecto-Cabito");
+        if (Files.isDirectory(subcarpetaProyecto) && Files.isDirectory(subcarpetaProyecto.resolve("src"))) {
+            return subcarpetaProyecto;
+        }
+        return Paths.get(".");
+    }
+
+    private static Path resolverRutaArchivo(String nombreArchivo) {
+        Path candidatoDirecto = Paths.get(nombreArchivo);
+        if (Files.exists(candidatoDirecto) && Files.isRegularFile(candidatoDirecto)) {
+            return candidatoDirecto;
+        }
+        Path base = obtenerDirectorioBase();
+        return base.resolve(nombreArchivo);
+    }
+
+    public static List<String> listarUsuariosRegistrados() {
+        Set<String> usuarios = new LinkedHashSet<>();
+        escanearDirectorioPerfiles(obtenerDirectorioBase().toFile(), usuarios);
+
+        File directorioActual = new File(".");
+        if (!directorioActual.toPath().normalize().equals(obtenerDirectorioBase().normalize())) {
+            escanearDirectorioPerfiles(directorioActual, usuarios);
+        }
+
+        List<String> resultado = new ArrayList<>(usuarios);
+        Collections.sort(resultado);
+        return resultado;
+    }
+
+    private static void escanearDirectorioPerfiles(File directorio, Set<String> usuarios) {
+        if (directorio == null || !directorio.exists() || !directorio.isDirectory()) {
+            return;
+        }
+        File[] archivos = directorio.listFiles();
+        if (archivos == null) {
+            return;
+        }
+        for (File archivo : archivos) {
+            if (!archivo.isFile()) {
+                continue;
+            }
+            String nombre = archivo.getName().toLowerCase();
+            if (nombre.startsWith(PREFIJO_ARCHIVO) && nombre.endsWith(EXTENSION_ARCHIVO)) {
+                String usuarioExtraido = nombre.substring(
+                        PREFIJO_ARCHIVO.length(),
+                        nombre.length() - EXTENSION_ARCHIVO.length()
+                ).trim();
+                if (!usuarioExtraido.isEmpty()) {
+                    usuarios.add(usuarioExtraido);
+                }
+            }
+        }
+    }
+
     public static boolean guardarPartida(Partida partida) {
+        if (partida == null) {
+            return false;
+        }
         try {
             new GestorArchivos().guardarPartidaEnDisco(partida);
             return true;
@@ -45,14 +132,13 @@ public class GestorArchivos {
     }
 
     public static Partida cargarPartida() {
-        GestorArchivos gestor = new GestorArchivos();
-        if (!gestor.existeArchivoGuardado()) {
-            return null;
-        }
+        return cargarPartida("cabito");
+    }
+
+    public static Partida cargarPartida(String nombreUsuario) {
         try {
-            return gestor.cargarPartidaDesdeDisco();
+            return new GestorArchivos(nombreUsuario).cargarPartidaDesdeDisco(nombreUsuario);
         } catch (IOException e) {
-            System.err.println("Error al cargar la partida: " + e.getMessage());
             return null;
         }
     }
@@ -62,12 +148,16 @@ public class GestorArchivos {
             throw new IllegalArgumentException("La partida a guardar no puede ser nula.");
         }
 
-        Path directorioPadre = rutaArchivo.getParent();
+        String usuarioNormalizado = normalizarNombreUsuario(partida.getNombreUsuario());
+        partida.setNombreUsuario(usuarioNormalizado);
+        this.rutaArchivo = obtenerDirectorioBase().resolve(obtenerNombreArchivo(usuarioNormalizado));
+
+        Path directorioPadre = this.rutaArchivo.getParent();
         if (directorioPadre != null && !Files.exists(directorioPadre)) {
             Files.createDirectories(directorioPadre);
         }
 
-        try (BufferedWriter writer = Files.newBufferedWriter(rutaArchivo, StandardCharsets.UTF_8)) {
+        try (BufferedWriter writer = Files.newBufferedWriter(this.rutaArchivo, StandardCharsets.UTF_8)) {
             writer.write("TIPO_REGISTRO,CAMPO_1,CAMPO_2,CAMPO_3,CAMPO_4,CAMPO_5,CAMPO_6,CAMPO_7,CAMPO_8,CAMPO_9,CAMPO_10,CAMPO_11,CAMPO_12,CAMPO_13");
             writer.newLine();
 
@@ -79,7 +169,8 @@ public class GestorArchivos {
                     String.valueOf(partida.getMonedas()),
                     partida.getMundoActual().name(),
                     String.valueOf(partida.getComprasRealizadas()),
-                    String.valueOf(partida.getVictoriasMinijuegos())
+                    String.valueOf(partida.getVictoriasMinijuegos()),
+                    limpiarTexto(partida.getNombreUsuario())
             ));
             writer.newLine();
 
@@ -155,12 +246,20 @@ public class GestorArchivos {
         }
     }
 
+    public Partida cargarPartidaDesdeDisco(String nombreUsuario) throws IOException {
+        String usuarioNormalizado = normalizarNombreUsuario(nombreUsuario);
+        this.rutaArchivo = resolverRutaArchivo(obtenerNombreArchivo(usuarioNormalizado));
+        Partida partida = cargarPartidaDesdeDisco();
+        partida.setNombreUsuario(usuarioNormalizado);
+        return partida;
+    }
+
     public Partida cargarPartidaDesdeDisco() throws IOException {
         if (!existeArchivoGuardado()) {
             throw new IOException("No existe el archivo de partida en: " + rutaArchivo.toAbsolutePath());
         }
 
-        Partida partida = new Partida("Estudiante Tadeísta");
+        Partida partida = new Partida("Estudiante Tadeísta", "jugador");
         partida.getConsumibles().clear();
 
         boolean armarioReiniciado = false;
@@ -207,7 +306,7 @@ public class GestorArchivos {
     }
 
     public boolean existeArchivoGuardado() {
-        return Files.exists(rutaArchivo) && Files.isRegularFile(rutaArchivo);
+        return rutaArchivo != null && Files.exists(rutaArchivo) && Files.isRegularFile(rutaArchivo);
     }
 
     public Path getRutaArchivo() {
@@ -225,6 +324,9 @@ public class GestorArchivos {
         partida.forzarMundoActual(parseEnumSeguro(Mundo.class, col[5], Mundo.PLAZOLETA));
         partida.setComprasRealizadas(parseIntSeguro(col[6], 0));
         partida.setVictoriasMinijuegos(parseIntSeguro(col[7], 0));
+        if (col.length >= 9 && !col[8].isBlank()) {
+            partida.setNombreUsuario(col[8]);
+        }
     }
 
     private void procesarLineaCabito(String[] col, Partida partida) {

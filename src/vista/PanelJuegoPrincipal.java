@@ -30,6 +30,7 @@ public class PanelJuegoPrincipal extends JPanel {
     private final JProgressBar pbFelicidad;
     private final JProgressBar pbSalud;
 
+    private final JLabel lblUsuario;
     private final JLabel lblNivel;
     private final JLabel lblXp;
     private final JLabel lblMonedas;
@@ -46,6 +47,7 @@ public class PanelJuegoPrincipal extends JPanel {
     private final JButton btnGuardarPartida;
     private final JButton btnCargarPartida;
     private final JButton btnCambiarMundo;
+    private final JButton btnCambiarUsuario;
 
     public PanelJuegoPrincipal() {
         setLayout(null);
@@ -89,13 +91,15 @@ public class PanelJuegoPrincipal extends JPanel {
         this.panelUI.add(this.pbFelicidad);
         this.panelUI.add(this.pbSalud);
 
-        this.lblNivel = crearEtiquetaInfo("Nivel: 0", 240, 20, 160, 28);
-        this.lblXp = crearEtiquetaInfo("XP: 0 / 100", 410, 20, 170, 28);
-        this.lblMonedas = crearEtiquetaInfo("Monedas: 30", 240, 55, 160, 28);
-        this.lblInteligencia = crearEtiquetaInfo("Inteligencia: 10", 410, 55, 170, 28);
-        this.lblMundo = crearEtiquetaInfo("Mundo: La Plazoleta", 240, 90, 175, 28);
-        this.lblEstado = crearEtiquetaInfo("Estado: Feliz", 425, 90, 155, 28);
+        this.lblUsuario = crearEtiquetaInfo("Jugador: jugador", 240, 15, 340, 26);
+        this.lblNivel = crearEtiquetaInfo("Nivel: 0", 240, 46, 165, 26);
+        this.lblXp = crearEtiquetaInfo("XP: 0 / 100", 415, 46, 165, 26);
+        this.lblMonedas = crearEtiquetaInfo("Monedas: 30", 240, 77, 165, 26);
+        this.lblInteligencia = crearEtiquetaInfo("Inteligencia: 10", 415, 77, 165, 26);
+        this.lblMundo = crearEtiquetaInfo("Mundo: La Plazoleta", 240, 108, 175, 26);
+        this.lblEstado = crearEtiquetaInfo("Estado: Feliz", 425, 108, 155, 26);
 
+        this.panelUI.add(this.lblUsuario);
         this.panelUI.add(this.lblNivel);
         this.panelUI.add(this.lblXp);
         this.panelUI.add(this.lblMonedas);
@@ -103,13 +107,15 @@ public class PanelJuegoPrincipal extends JPanel {
         this.panelUI.add(this.lblMundo);
         this.panelUI.add(this.lblEstado);
 
-        this.btnCambiarMundo = crearBoton("Cambiar Mundo", 600, 20, 175, 32, new Color(41, 128, 185));
-        this.btnGuardarPartida = crearBoton("Guardar Partida", 600, 60, 175, 32, new Color(39, 174, 96));
-        this.btnCargarPartida = crearBoton("Cargar Partida", 600, 100, 175, 32, new Color(127, 140, 141));
+        this.btnCambiarMundo = crearBoton("Cambiar Mundo", 600, 15, 175, 28, new Color(41, 128, 185));
+        this.btnGuardarPartida = crearBoton("Guardar Partida", 600, 48, 175, 28, new Color(39, 174, 96));
+        this.btnCargarPartida = crearBoton("Cargar Partida", 600, 81, 175, 28, new Color(127, 140, 141));
+        this.btnCambiarUsuario = crearBoton("Cambiar Usuario", 600, 114, 175, 28, new Color(142, 68, 173));
 
         this.panelUI.add(this.btnCambiarMundo);
         this.panelUI.add(this.btnGuardarPartida);
         this.panelUI.add(this.btnCargarPartida);
+        this.panelUI.add(this.btnCambiarUsuario);
 
         this.btnExplorar = crearBoton("Explorar", 20, 500, 118, 42, new Color(21, 67, 96));
         this.btnTienda = crearBoton("Tienda", 148, 500, 118, 42, new Color(21, 67, 96));
@@ -217,6 +223,11 @@ public class PanelJuegoPrincipal extends JPanel {
         this.lblAccesorio.repaint();
     }
 
+    public void actualizarUsuario(String nombreUsuario) {
+        String mostrar = (nombreUsuario != null && !nombreUsuario.isBlank()) ? nombreUsuario : "jugador";
+        this.lblUsuario.setText("Jugador: " + mostrar);
+    }
+
     public void actualizarEstadisticas(
             int hambre,
             int energia,
@@ -293,6 +304,10 @@ public class PanelJuegoPrincipal extends JPanel {
         return pbSalud;
     }
 
+    public JLabel getLblUsuario() {
+        return lblUsuario;
+    }
+
     public JLabel getLblNivel() {
         return lblNivel;
     }
@@ -352,5 +367,8 @@ public class PanelJuegoPrincipal extends JPanel {
     public JButton getBtnCambiarMundo() {
         return btnCambiarMundo;
     }
-}
 
+    public JButton getBtnCambiarUsuario() {
+        return btnCambiarUsuario;
+    }
+}

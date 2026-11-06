@@ -13,8 +13,11 @@ public class VentanaPrincipal extends JFrame {
 
     public static final String PANTALLA_INICIO = "INICIO";
     public static final String PANTALLA_PRINCIPAL = "PRINCIPAL";
+    public static final String VISTA_PRINCIPAL = PANTALLA_PRINCIPAL;
     public static final String PANTALLA_TIENDA = "TIENDA";
     public static final String PANTALLA_INVENTARIO = "INVENTARIO";
+    public static final String VISTA_MENU_MINIJUEGOS = "MENU_MINIJUEGOS";
+    public static final String PANTALLA_MENU_MINIJUEGOS = VISTA_MENU_MINIJUEGOS;
     public static final String PANTALLA_MEMORIA = "MINIJUEGO_MEMORIA";
     public static final String PANTALLA_ATRAPA_COMIDA = "MINIJUEGO_ATRAPA_COMIDA";
 
@@ -24,6 +27,7 @@ public class VentanaPrincipal extends JFrame {
     private final PanelJuegoPrincipal panelPrincipal;
     private final PanelTienda panelTienda;
     private final PanelInventario panelInventario;
+    private final PanelMenuMinijuegos panelMenuMinijuegos;
     private final PanelMemoria panelMemoria;
     private final PanelAtrapaComida panelAtrapaComida;
 
@@ -40,12 +44,14 @@ public class VentanaPrincipal extends JFrame {
         this.panelPrincipal = new PanelJuegoPrincipal();
         this.panelTienda = new PanelTienda();
         this.panelInventario = new PanelInventario();
+        this.panelMenuMinijuegos = new PanelMenuMinijuegos();
         this.panelMemoria = new PanelMemoria();
         this.panelAtrapaComida = new PanelAtrapaComida();
 
         agregarPanel(this.panelPrincipal, PANTALLA_PRINCIPAL);
         agregarPanel(this.panelTienda, PANTALLA_TIENDA);
         agregarPanel(this.panelInventario, PANTALLA_INVENTARIO);
+        agregarPanel(this.panelMenuMinijuegos, VISTA_MENU_MINIJUEGOS);
         agregarPanel(this.panelMemoria, PANTALLA_MEMORIA);
         agregarPanel(this.panelAtrapaComida, PANTALLA_ATRAPA_COMIDA);
 
@@ -94,6 +100,10 @@ public class VentanaPrincipal extends JFrame {
 
     public PanelInventario getPanelInventario() {
         return panelInventario;
+    }
+
+    public PanelMenuMinijuegos getPanelMenuMinijuegos() {
+        return panelMenuMinijuegos;
     }
 
     public PanelMemoria getPanelMemoria() {

@@ -2,12 +2,12 @@ package controlador;
 
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import javax.swing.JButton;
-import javax.swing.JOptionPane;
 import javax.swing.Timer;
 import minijuegos.LogicaAtrapaComida;
 import minijuegos.LogicaMemoria;
@@ -22,10 +22,12 @@ import modelo.Mundo;
 import modelo.Partida;
 import modelo.TipoEvento;
 import persistencia.GestorArchivos;
+import vista.DialogoTadeista;
 import vista.PanelAtrapaComida;
 import vista.PanelInventario;
 import vista.PanelJuegoPrincipal;
 import vista.PanelMemoria;
+import vista.PanelMenuMinijuegos;
 import vista.PanelTienda;
 import vista.VentanaPrincipal;
 
@@ -49,7 +51,7 @@ public class Controlador {
     private final Random random;
 
     public Controlador(Partida partida, VentanaPrincipal vista) {
-        this.partida = (partida != null) ? partida : new Partida("Cabito");
+        this.partida = (partida != null) ? partida : new Partida("Cabito", "jugador");
         this.vista = vista;
         this.random = new Random();
         this.logicaMemoria = new LogicaMemoria(this.random);
@@ -74,6 +76,7 @@ public class Controlador {
         PanelJuegoPrincipal panelPrincipal = this.vista.getPanelPrincipal();
         Cabito cabito = this.partida.getCabito();
 
+        panelPrincipal.actualizarUsuario(this.partida.getNombreUsuario());
         panelPrincipal.actualizarEstadisticas(
                 cabito.getHambre(),
                 cabito.getEnergia(),
@@ -106,10 +109,12 @@ public class Controlador {
             }
         }
         panelPrincipal.actualizarAccesorio(imagenAccesorioEquipado, offsetX, offsetY, escala);
+        this.vista.getPanelMenuMinijuegos().actualizarEnergia(cabito.getEnergia(), cabito.getSalud());
     }
 
     private void inicializarNavegacion() {
         PanelJuegoPrincipal panelPrincipal = this.vista.getPanelPrincipal();
+        PanelMenuMinijuegos panelMenuMinijuegos = this.vista.getPanelMenuMinijuegos();
 
         panelPrincipal.getBtnTienda().addActionListener(e -> {
             cargarVistaTienda();
@@ -122,6 +127,14 @@ public class Controlador {
         });
 
         panelPrincipal.getBtnMinijuegos().addActionListener(e -> abrirSelectorMinijuegos());
+
+        panelMenuMinijuegos.getBtnVolver().addActionListener(e -> {
+            actualizarVistaPrincipal();
+            this.vista.mostrarPanel(VentanaPrincipal.VISTA_PRINCIPAL);
+        });
+
+        panelMenuMinijuegos.getBtnJugarAtrapaComida().addActionListener(e -> iniciarPartidaAtrapaComida());
+        panelMenuMinijuegos.getBtnJugarMemoria().addActionListener(e -> iniciarPartidaMemoria());
 
         this.vista.getPanelTienda().getBtnVolver().addActionListener(e -> {
             actualizarVistaPrincipal();
@@ -151,78 +164,118 @@ public class Controlador {
         PanelJuegoPrincipal panelPrincipal = this.vista.getPanelPrincipal();
 
         panelPrincipal.getBtnGuardarPartida().addActionListener(e -> {
+            String usuarioActivo = this.partida.getNombreUsuario();
+            String nombreArchivo = GestorArchivos.obtenerNombreArchivo(usuarioActivo);
             boolean exito = GestorArchivos.guardarPartida(this.partida);
             if (exito) {
-                JOptionPane.showMessageDialog(
+                DialogoTadeista.mostrarMensaje(
                         this.vista,
-                        "Partida guardada exitosamente en " + GestorArchivos.ARCHIVO_POR_DEFECTO,
                         "Guardado Exitoso",
-                        JOptionPane.INFORMATION_MESSAGE
+                        "Partida del perfil '" + usuarioActivo + "' guardada exitosamente en:\n" + nombreArchivo
                 );
             } else {
-                JOptionPane.showMessageDialog(
+                DialogoTadeista.mostrarMensaje(
                         this.vista,
-                        "No fue posible guardar la partida.",
                         "Error al Guardar",
-                        JOptionPane.ERROR_MESSAGE
+                        "No fue posible guardar la partida del perfil '" + usuarioActivo + "'."
                 );
             }
         });
 
         panelPrincipal.getBtnCargarPartida().addActionListener(e -> {
-            Partida cargada = GestorArchivos.cargarPartida();
+            String usuarioActivo = this.partida.getNombreUsuario();
+            String nombreArchivo = GestorArchivos.obtenerNombreArchivo(usuarioActivo);
+            Partida cargada = GestorArchivos.cargarPartida(usuarioActivo);
             if (cargada != null) {
                 this.partida = cargada;
                 actualizarVistaPrincipal();
-                JOptionPane.showMessageDialog(
+                DialogoTadeista.mostrarMensaje(
                         this.vista,
-                        "Partida cargada correctamente.",
                         "Carga Exitosa",
-                        JOptionPane.INFORMATION_MESSAGE
+                        "Partida del perfil '" + usuarioActivo + "' recargada desde:\n" + nombreArchivo
                 );
             } else {
-                JOptionPane.showMessageDialog(
+                DialogoTadeista.mostrarMensaje(
                         this.vista,
-                        "No se encontró un archivo de partida previo (" + GestorArchivos.ARCHIVO_POR_DEFECTO + ").",
                         "Archivo no encontrado",
-                        JOptionPane.WARNING_MESSAGE
+                        "No se encontró un archivo guardado para el perfil '" + usuarioActivo + "' (" + nombreArchivo + ")."
                 );
             }
         });
 
+        panelPrincipal.getBtnCambiarUsuario().addActionListener(e -> mostrarSelectorUsuario(true));
         panelPrincipal.getBtnExplorar().addActionListener(e -> ejecutarExploracion());
         panelPrincipal.getBtnCambiarMundo().addActionListener(e -> mostrarSelectorMundo());
         panelPrincipal.getBtnDormir().addActionListener(e -> ejecutarDormir());
         panelPrincipal.getBtnLavarse().addActionListener(e -> ejecutarLavarse());
     }
 
+    public void mostrarSelectorUsuario(boolean permitirCancelar) {
+        boolean relojEstabaActivo = this.relojPrincipal != null && this.relojPrincipal.isRunning();
+        if (relojEstabaActivo) {
+            this.relojPrincipal.stop();
+        }
+
+        List<String> perfilesExistentes = GestorArchivos.listarUsuariosRegistrados();
+        String usuarioActual = (this.partida != null) ? this.partida.getNombreUsuario() : "jugador";
+
+        String seleccion = DialogoTadeista.mostrarSelectorUsuario(
+                this.vista,
+                perfilesExistentes,
+                usuarioActual,
+                permitirCancelar
+        );
+
+        if (seleccion != null && !seleccion.isBlank()) {
+            String usuarioLimpio = GestorArchivos.normalizarNombreUsuario(seleccion);
+            try {
+                this.partida = new GestorArchivos(usuarioLimpio).cargarPartidaDesdeDisco(usuarioLimpio);
+            } catch (IOException ex) {
+                this.partida = new Partida(seleccion.trim(), usuarioLimpio);
+                GestorArchivos.guardarPartida(this.partida);
+            }
+            actualizarVistaPrincipal();
+        } else if (!permitirCancelar) {
+            String respaldo = !perfilesExistentes.isEmpty() ? perfilesExistentes.get(0) : "jugador";
+            Partida cargada = GestorArchivos.cargarPartida(respaldo);
+            if (cargada != null) {
+                this.partida = cargada;
+            } else {
+                this.partida = new Partida("Jugador", respaldo);
+                GestorArchivos.guardarPartida(this.partida);
+            }
+            actualizarVistaPrincipal();
+        }
+
+        if (relojEstabaActivo) {
+            this.relojPrincipal.start();
+        }
+    }
+
     private void ejecutarExploracion() {
         if (!this.partida.iniciarExploracion()) {
-            JOptionPane.showMessageDialog(
+            DialogoTadeista.mostrarMensaje(
                     this.vista,
-                    "Cabito no puede explorar ahora. Requiere al menos 10 de Energía y no estar Enfermo (Salud > 25).",
                     "No puede explorar",
-                    JOptionPane.WARNING_MESSAGE
+                    "Cabito no puede explorar ahora.\nRequiere al menos 10 de Energía y no estar Enfermo (Salud > 25)."
             );
             return;
         }
 
         actualizarVistaPrincipal();
-        Evento evento = BancoEventos.obtenerEventoAleatorio(this.random);
-        String titulo = (evento.getTipo() == TipoEvento.HALLAZGO)
-                ? "Hallazgo Histórico Tadeísta"
-                : "Quiz Académico";
+        Mundo mundoActual = this.partida.getMundoActual();
+        Evento evento = BancoEventos.obtenerEventoAleatorio(mundoActual, this.random);
+        String tipoEtiqueta = (evento.getTipo() == TipoEvento.HALLAZGO)
+                ? "Hallazgo UTADEO"
+                : "Quiz Cultural";
+        String titulo = tipoEtiqueta + " - " + mundoActual.getNombre();
 
         String[] opciones = evento.getOpciones();
-        int seleccion = JOptionPane.showOptionDialog(
+        int seleccion = DialogoTadeista.mostrarPreguntaExplorar(
                 this.vista,
-                evento.getPregunta(),
                 titulo,
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                opciones,
-                opciones[0]
+                evento.getPregunta(),
+                opciones
         );
 
         if (seleccion < 0) {
@@ -234,20 +287,20 @@ public class Controlador {
         actualizarVistaPrincipal();
 
         if (acertado) {
-            StringBuilder mensaje = new StringBuilder("¡Respuesta correcta!\n");
+            StringBuilder mensaje = new StringBuilder("¡Respuesta correcta!\n\n");
             mensaje.append("+").append(evento.getRecompensaMonedas()).append(" Monedas\n");
             mensaje.append("+").append(evento.getRecompensaXp()).append(" XP\n");
             mensaje.append("+").append(evento.getBonoInteligencia()).append(" Inteligencia");
             if (this.partida.getNivel() > nivelAnterior) {
                 mensaje.append("\n\n¡Felicidades! Cabito subió al Nivel ").append(this.partida.getNivel()).append(".");
             }
-            JOptionPane.showMessageDialog(this.vista, mensaje.toString(), "¡Acierto!", JOptionPane.INFORMATION_MESSAGE);
+            DialogoTadeista.mostrarMensaje(this.vista, "¡Acierto Tadeísta!", mensaje.toString());
         } else {
             String respuestaCorrecta = opciones[evento.getIndiceRespuestaCorrecta()];
-            String mensaje = "Respuesta incorrecta. La opción correcta era: " + respuestaCorrecta
-                    + "\n-" + evento.getPenalizacionMonedas() + " Monedas"
+            String mensaje = "Respuesta incorrecta.\nLa opción correcta era: " + respuestaCorrecta
+                    + "\n\n-" + evento.getPenalizacionMonedas() + " Monedas"
                     + "\n+" + evento.getConsolacionXp() + " XP de consolación.";
-            JOptionPane.showMessageDialog(this.vista, mensaje, "Intento Fallido", JOptionPane.WARNING_MESSAGE);
+            DialogoTadeista.mostrarMensaje(this.vista, "Intento Fallido", mensaje);
         }
     }
 
@@ -259,20 +312,17 @@ public class Controlador {
             }
         }
 
-        String[] nombresMundos = new String[disponibles.size()];
+        String[] opcionesMundos = new String[disponibles.size() + 1];
         for (int i = 0; i < disponibles.size(); i++) {
-            nombresMundos[i] = disponibles.get(i).getNombre();
+            opcionesMundos[i] = disponibles.get(i).getNombre();
         }
+        opcionesMundos[disponibles.size()] = "Cancelar";
 
-        int seleccion = JOptionPane.showOptionDialog(
+        int seleccion = DialogoTadeista.mostrarOpciones(
                 this.vista,
-                "Selecciona el escenario de la UTADEO al que deseas ir:\n(La Biblioteca se desbloquea en Nivel 2 y El Auditorio en Nivel 4)",
                 "Viajar por el Campus",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                nombresMundos,
-                this.partida.getMundoActual().getNombre()
+                "Selecciona el escenario de la UTADEO al que deseas ir:\n(La Biblioteca se desbloquea en Nivel 2 y El Auditorio en Nivel 4)",
+                opcionesMundos
         );
 
         if (seleccion >= 0 && seleccion < disponibles.size()) {
@@ -329,18 +379,16 @@ public class Controlador {
                 if (this.partida.comprarConsumible(itemCatalogo)) {
                     panelTienda.actualizarMonedas(this.partida.getMonedas());
                     actualizarVistaPrincipal();
-                    JOptionPane.showMessageDialog(
+                    DialogoTadeista.mostrarMensaje(
                             this.vista,
-                            "Compraste: " + itemCatalogo.getNombre() + " (guardado en tu mochila).",
                             "Compra Exitosa",
-                            JOptionPane.INFORMATION_MESSAGE
+                            "Compraste: " + itemCatalogo.getNombre() + "\n(Se ha guardado en tu mochila)."
                     );
                 } else {
-                    JOptionPane.showMessageDialog(
+                    DialogoTadeista.mostrarMensaje(
                             this.vista,
-                            "No tienes suficientes monedas para comprar " + itemCatalogo.getNombre() + ".",
                             "Monedas Insuficientes",
-                            JOptionPane.WARNING_MESSAGE
+                            "No tienes suficientes monedas para comprar " + itemCatalogo.getNombre() + "."
                     );
                 }
             });
@@ -410,33 +458,17 @@ public class Controlador {
     }
 
     private void abrirSelectorMinijuegos() {
-        if (!this.partida.getCabito().puedeJugarMinijuego()) {
-            JOptionPane.showMessageDialog(
+        Cabito cabito = this.partida.getCabito();
+        if (!cabito.puedeJugarMinijuego()) {
+            DialogoTadeista.mostrarMensaje(
                     this.vista,
-                    "Cabito necesita al menos 15 de Energía y Salud mayor a 25 para jugar minijuegos.",
                     "No puede jugar",
-                    JOptionPane.WARNING_MESSAGE
+                    "Cabito necesita al menos 15 de Energía y Salud mayor a 25 para jugar minijuegos."
             );
             return;
         }
-
-        String[] opciones = {"Atrapa la Comida (Teclado)", "Memoria Tadeísta (Matrices)", "Cancelar"};
-        int eleccion = JOptionPane.showOptionDialog(
-                this.vista,
-                "Elige el minijuego que deseas iniciar (Costo: -15 Energía):",
-                "Minijuegos Tadeístas",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                opciones,
-                opciones[0]
-        );
-
-        if (eleccion == 0) {
-            iniciarPartidaAtrapaComida();
-        } else if (eleccion == 1) {
-            iniciarPartidaMemoria();
-        }
+        this.vista.getPanelMenuMinijuegos().actualizarEnergia(cabito.getEnergia(), cabito.getSalud());
+        this.vista.mostrarPanel(VentanaPrincipal.VISTA_MENU_MINIJUEGOS);
     }
 
     private void inicializarMinijuegos() {
@@ -480,6 +512,11 @@ public class Controlador {
 
     private void iniciarPartidaMemoria() {
         if (!this.partida.iniciarMinijuego()) {
+            DialogoTadeista.mostrarMensaje(
+                    this.vista,
+                    "No puede jugar",
+                    "Cabito necesita al menos 15 de Energía y Salud mayor a 25 para jugar minijuegos."
+            );
             return;
         }
         this.partida.getCabito().setEstadoActual(EstadoCabito.JUGANDO);
@@ -548,6 +585,11 @@ public class Controlador {
 
     private void iniciarPartidaAtrapaComida() {
         if (!this.partida.iniciarMinijuego()) {
+            DialogoTadeista.mostrarMensaje(
+                    this.vista,
+                    "No puede jugar",
+                    "Cabito necesita al menos 15 de Energía y Salud mayor a 25 para jugar minijuegos."
+            );
             return;
         }
         this.partida.getCabito().setEstadoActual(EstadoCabito.JUGANDO);
@@ -601,11 +643,10 @@ public class Controlador {
             resumen.append("\n\n¡Cabito subió al Nivel ").append(this.partida.getNivel()).append("!");
         }
 
-        JOptionPane.showMessageDialog(
+        DialogoTadeista.mostrarMensaje(
                 this.vista,
-                resumen.toString(),
                 "Resultado del Minijuego",
-                resultado.esVictoria() ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.PLAIN_MESSAGE
+                resumen.toString()
         );
 
         this.vista.mostrarPanel(VentanaPrincipal.PANTALLA_PRINCIPAL);
@@ -618,6 +659,7 @@ public class Controlador {
     public void iniciar() {
         actualizarVistaPrincipal();
         this.vista.setVisible(true);
+        mostrarSelectorUsuario(false);
         this.relojPrincipal.start();
     }
 
@@ -633,4 +675,3 @@ public class Controlador {
         return relojPrincipal;
     }
 }
-

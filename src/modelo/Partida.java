@@ -11,6 +11,7 @@ public class Partida {
     private static final int[] UMBRALES_XP = {0, 100, 250, 450, 700, 1000};
 
     private String nombrePartida;
+    private String nombreUsuario;
     private Cabito cabito;
     private int nivel;
     private int experiencia;
@@ -24,8 +25,17 @@ public class Partida {
     private final LinkedList<Item> armario;
     private final LinkedList<Logro> logros;
 
-    public Partida(String nombrePartida) {
+    public Partida() {
+        this("Estudiante Tadeísta", "jugador");
+    }
+
+    public Partida(String nombreUsuario) {
+        this(nombreUsuario, nombreUsuario);
+    }
+
+    public Partida(String nombrePartida, String nombreUsuario) {
         this.nombrePartida = (nombrePartida == null || nombrePartida.isBlank()) ? "Estudiante Tadeísta" : nombrePartida.trim();
+        this.nombreUsuario = normalizarUsuario(nombreUsuario);
         this.cabito = new Cabito();
         this.nivel = 0;
         this.experiencia = 0;
@@ -42,6 +52,14 @@ public class Partida {
         this.consumibles = new LinkedList<>();
         this.armario = Item.crearArmarioInicial();
         this.logros = Logro.crearLogrosIniciales();
+    }
+
+    private String normalizarUsuario(String usuario) {
+        if (usuario == null || usuario.isBlank()) {
+            return "jugador";
+        }
+        String limpio = usuario.trim().toLowerCase().replaceAll("[^a-z0-9_-]", "");
+        return limpio.isEmpty() ? "jugador" : limpio;
     }
 
     public void ganarExperiencia(int cantidadXp) {
@@ -242,6 +260,14 @@ public class Partida {
         if (nombrePartida != null && !nombrePartida.isBlank()) {
             this.nombrePartida = nombrePartida.trim();
         }
+    }
+
+    public String getNombreUsuario() {
+        return nombreUsuario;
+    }
+
+    public void setNombreUsuario(String nombreUsuario) {
+        this.nombreUsuario = normalizarUsuario(nombreUsuario);
     }
 
     public Cabito getCabito() {
