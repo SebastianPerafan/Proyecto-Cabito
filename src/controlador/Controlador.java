@@ -1,7 +1,10 @@
 package controlador;
 
+import java.awt.Cursor;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -33,8 +36,8 @@ import vista.VentanaPrincipal;
 
 public class Controlador {
 
-    private static final int INTERVALO_RELOJ_MILLIS = 5000;
-    private static final int DURACION_ESTADO_TEMPORAL_MILLIS = 4000;
+    private static final int INTERVALO_RELOJ_MILLIS = 8500;
+    private static final int DURACION_ESTADO_TEMPORAL_MILLIS = 20000;
     private static final int TICK_ATRAPA_COMIDA_MILLIS = 33;
 
     private Partida partida;
@@ -70,6 +73,13 @@ public class Controlador {
             this.partida.getCabito().aplicarDesgasteCiclo();
             actualizarVistaPrincipal();
         });
+    }
+
+    private boolean estaCabitoDurmiendo() {
+        return (this.timerEstadoTemporal != null && this.timerEstadoTemporal.isRunning())
+                || (this.partida != null
+                && this.partida.getCabito() != null
+                && this.partida.getCabito().getEstadoActual() == EstadoCabito.DORMIDO);
     }
 
     public void actualizarVistaPrincipal() {
@@ -109,7 +119,15 @@ public class Controlador {
             }
         }
         panelPrincipal.actualizarAccesorio(imagenAccesorioEquipado, offsetX, offsetY, escala);
+        panelPrincipal.setControlesHabilitados(!estaCabitoDurmiendo());
         this.vista.getPanelMenuMinijuegos().actualizarEnergia(cabito.getEnergia(), cabito.getSalud());
+        this.vista.getPanelInventario().actualizarEstadisticasJugador(
+                this.partida.getNivel(),
+                this.partida.getExperiencia(),
+                this.partida.getXpSiguienteNivel(),
+                cabito.getSalud(),
+                cabito.getEnergia()
+        );
     }
 
     private void inicializarNavegacion() {
@@ -117,16 +135,27 @@ public class Controlador {
         PanelMenuMinijuegos panelMenuMinijuegos = this.vista.getPanelMenuMinijuegos();
 
         panelPrincipal.getBtnTienda().addActionListener(e -> {
+            if (estaCabitoDurmiendo()) {
+                return;
+            }
             cargarVistaTienda();
             this.vista.mostrarPanel(VentanaPrincipal.PANTALLA_TIENDA);
         });
 
         panelPrincipal.getBtnInventario().addActionListener(e -> {
+            if (estaCabitoDurmiendo()) {
+                return;
+            }
             cargarVistaInventario();
             this.vista.mostrarPanel(VentanaPrincipal.PANTALLA_INVENTARIO);
         });
 
-        panelPrincipal.getBtnMinijuegos().addActionListener(e -> abrirSelectorMinijuegos());
+        panelPrincipal.getBtnMinijuegos().addActionListener(e -> {
+            if (estaCabitoDurmiendo()) {
+                return;
+            }
+            abrirSelectorMinijuegos();
+        });
 
         panelMenuMinijuegos.getBtnVolver().addActionListener(e -> {
             actualizarVistaPrincipal();
@@ -164,6 +193,9 @@ public class Controlador {
         PanelJuegoPrincipal panelPrincipal = this.vista.getPanelPrincipal();
 
         panelPrincipal.getBtnGuardarPartida().addActionListener(e -> {
+            if (estaCabitoDurmiendo()) {
+                return;
+            }
             String usuarioActivo = this.partida.getNombreUsuario();
             String nombreArchivo = GestorArchivos.obtenerNombreArchivo(usuarioActivo);
             boolean exito = GestorArchivos.guardarPartida(this.partida);
@@ -183,6 +215,9 @@ public class Controlador {
         });
 
         panelPrincipal.getBtnCargarPartida().addActionListener(e -> {
+            if (estaCabitoDurmiendo()) {
+                return;
+            }
             String usuarioActivo = this.partida.getNombreUsuario();
             String nombreArchivo = GestorArchivos.obtenerNombreArchivo(usuarioActivo);
             Partida cargada = GestorArchivos.cargarPartida(usuarioActivo);
@@ -203,14 +238,39 @@ public class Controlador {
             }
         });
 
-        panelPrincipal.getBtnCambiarUsuario().addActionListener(e -> mostrarSelectorUsuario(true));
+        panelPrincipal.getBtnCambiarUsuario().addActionListener(e -> {
+            if (estaCabitoDurmiendo()) {
+                return;
+            }
+            mostrarSelectorUsuario(true);
+        });
         panelPrincipal.getBtnExplorar().addActionListener(e -> ejecutarExploracion());
         panelPrincipal.getBtnCambiarMundo().addActionListener(e -> mostrarSelectorMundo());
         panelPrincipal.getBtnDormir().addActionListener(e -> ejecutarDormir());
-        panelPrincipal.getBtnLavarse().addActionListener(e -> ejecutarLavarse());
+
+        MouseAdapter listenerAcariciar = new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                acariciarCabito();
+            }
+        };
+        panelPrincipal.getLblCabito().setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        panelPrincipal.getLblCabito().addMouseListener(listenerAcariciar);
+    }
+
+    private void acariciarCabito() {
+        if (estaCabitoDurmiendo()) {
+            return;
+        }
+        Cabito cabito = this.partida.getCabito();
+        cabito.modificarFelicidad(5);
+        actualizarVistaPrincipal();
     }
 
     public void mostrarSelectorUsuario(boolean permitirCancelar) {
+        if (permitirCancelar && estaCabitoDurmiendo()) {
+            return;
+        }
         boolean relojEstabaActivo = this.relojPrincipal != null && this.relojPrincipal.isRunning();
         if (relojEstabaActivo) {
             this.relojPrincipal.stop();
@@ -234,6 +294,9 @@ public class Controlador {
                 this.partida = new Partida(seleccion.trim(), usuarioLimpio);
                 GestorArchivos.guardarPartida(this.partida);
             }
+            if (this.partida.getCabito().getEstadoActual() == EstadoCabito.DORMIDO) {
+                this.partida.getCabito().actualizarEstadoAutomatico();
+            }
             actualizarVistaPrincipal();
         } else if (!permitirCancelar) {
             String respaldo = !perfilesExistentes.isEmpty() ? perfilesExistentes.get(0) : "jugador";
@@ -244,6 +307,9 @@ public class Controlador {
                 this.partida = new Partida("Jugador", respaldo);
                 GestorArchivos.guardarPartida(this.partida);
             }
+            if (this.partida.getCabito().getEstadoActual() == EstadoCabito.DORMIDO) {
+                this.partida.getCabito().actualizarEstadoAutomatico();
+            }
             actualizarVistaPrincipal();
         }
 
@@ -253,6 +319,9 @@ public class Controlador {
     }
 
     private void ejecutarExploracion() {
+        if (estaCabitoDurmiendo()) {
+            return;
+        }
         if (!this.partida.iniciarExploracion()) {
             DialogoTadeista.mostrarMensaje(
                     this.vista,
@@ -305,6 +374,9 @@ public class Controlador {
     }
 
     private void mostrarSelectorMundo() {
+        if (estaCabitoDurmiendo()) {
+            return;
+        }
         List<Mundo> disponibles = new ArrayList<>();
         for (Mundo mundo : Mundo.values()) {
             if (this.partida.estaMundoDesbloqueado(mundo)) {
@@ -332,18 +404,13 @@ public class Controlador {
     }
 
     private void ejecutarDormir() {
+        if (estaCabitoDurmiendo()) {
+            return;
+        }
         Cabito cabito = this.partida.getCabito();
         cabito.setEnergia(cabito.getEnergia() + 35);
         cabito.setSalud(cabito.getSalud() + 5);
         activarEstadoTemporal(EstadoCabito.DORMIDO);
-    }
-
-    private void ejecutarLavarse() {
-        Cabito cabito = this.partida.getCabito();
-        cabito.setHigiene(cabito.getHigiene() + 35);
-        cabito.setFelicidad(cabito.getFelicidad() + 5);
-        cabito.actualizarEstadoAutomatico();
-        actualizarVistaPrincipal();
     }
 
     private void activarEstadoTemporal(EstadoCabito estadoTemporal) {
@@ -351,10 +418,12 @@ public class Controlador {
             this.timerEstadoTemporal.stop();
         }
         this.partida.getCabito().setEstadoActual(estadoTemporal);
+        this.vista.getPanelPrincipal().setControlesHabilitados(false);
         actualizarVistaPrincipal();
 
         this.timerEstadoTemporal = new Timer(DURACION_ESTADO_TEMPORAL_MILLIS, e -> {
             this.partida.getCabito().actualizarEstadoAutomatico();
+            this.vista.getPanelPrincipal().setControlesHabilitados(true);
             actualizarVistaPrincipal();
         });
         this.timerEstadoTemporal.setRepeats(false);
@@ -379,10 +448,12 @@ public class Controlador {
                 if (this.partida.comprarConsumible(itemCatalogo)) {
                     panelTienda.actualizarMonedas(this.partida.getMonedas());
                     actualizarVistaPrincipal();
+                    int totalEnMochila = this.partida.contarConsumiblePorId(itemCatalogo.getId());
                     DialogoTadeista.mostrarMensaje(
                             this.vista,
                             "Compra Exitosa",
-                            "Compraste: " + itemCatalogo.getNombre() + "\n(Se ha guardado en tu mochila)."
+                            "Compraste: " + itemCatalogo.getNombre()
+                            + "\n(Tienes x" + totalEnMochila + " en tu mochila)."
                     );
                 } else {
                     DialogoTadeista.mostrarMensaje(
@@ -398,20 +469,30 @@ public class Controlador {
     private void cargarVistaInventario() {
         PanelInventario panelInventario = this.vista.getPanelInventario();
         panelInventario.limpiarInventario();
+        Cabito cabito = this.partida.getCabito();
+        panelInventario.actualizarEstadisticasJugador(
+                this.partida.getNivel(),
+                this.partida.getExperiencia(),
+                this.partida.getXpSiguienteNivel(),
+                cabito.getSalud(),
+                cabito.getEnergia()
+        );
 
-        LinkedList<Item> consumibles = this.partida.getConsumibles();
-        if (consumibles.isEmpty()) {
+        LinkedList<Item> consumiblesUnicos = this.partida.obtenerConsumiblesUnicos();
+        if (consumiblesUnicos.isEmpty()) {
             panelInventario.mostrarMensajeVacioConsumibles("Tu mochila de consumibles está vacía. ¡Visita la Tienda!");
         } else {
-            for (Item item : new ArrayList<>(consumibles)) {
+            for (Item item : consumiblesUnicos) {
+                int cantidad = this.partida.contarConsumiblePorId(item.getId());
                 JButton btnUsar = panelInventario.agregarItemConsumible(
                         item.getNombre(),
                         item.getDescripcion(),
+                        cantidad,
                         item.getNombreImagen()
                 );
 
                 btnUsar.addActionListener(e -> {
-                    if (this.partida.usarConsumible(item)) {
+                    if (this.partida.usarConsumiblePorId(item.getId())) {
                         cargarVistaInventario();
                         actualizarVistaPrincipal();
                     }
@@ -628,6 +709,7 @@ public class Controlador {
     private void finalizarMinijuego(ResultadoMinijuego resultado, String nombreJuego) {
         int nivelAnterior = this.partida.getNivel();
         this.partida.aplicarResultadoMinijuego(resultado);
+        this.partida.getCabito().modificarFelicidad(25);
         restaurarEstadoCabitoTrasJuego();
         actualizarVistaPrincipal();
 
@@ -635,7 +717,8 @@ public class Controlador {
         resumen.append(resultado.esVictoria() ? "¡Victoria en " : "Fin de partida en ").append(nombreJuego).append("!\n\n");
         resumen.append("Puntaje obtenido: ").append(resultado.puntaje()).append("\n");
         resumen.append("Monedas ganadas: +").append(resultado.recompensaMonedas()).append("\n");
-        resumen.append("Experiencia ganada: +").append(resultado.recompensaXp()).append(" XP");
+        resumen.append("Experiencia ganada: +").append(resultado.recompensaXp()).append(" XP\n");
+        resumen.append("Felicidad recuperada: +25 Felicidad");
         if (resultado.otorgaManzana()) {
             resumen.append("\nPremio extra: +1 Manzana gratis en tu mochila");
         }

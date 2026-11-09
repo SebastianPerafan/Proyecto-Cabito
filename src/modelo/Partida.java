@@ -149,6 +149,46 @@ public class Partida {
         return true;
     }
 
+    public boolean usarConsumiblePorId(String idItem) {
+        if (idItem == null || idItem.isBlank()) {
+            return false;
+        }
+        for (Item item : this.consumibles) {
+            if (idItem.equalsIgnoreCase(item.getId())) {
+                return usarConsumible(item);
+            }
+        }
+        return false;
+    }
+
+    public int contarConsumiblePorId(String idItem) {
+        if (idItem == null || idItem.isBlank()) {
+            return 0;
+        }
+        int contador = 0;
+        for (Item item : this.consumibles) {
+            if (idItem.equalsIgnoreCase(item.getId())) {
+                contador++;
+            }
+        }
+        return contador;
+    }
+
+    public LinkedList<Item> obtenerConsumiblesUnicos() {
+        LinkedList<Item> unicos = new LinkedList<>();
+        LinkedList<String> idsVistos = new LinkedList<>();
+        for (Item item : this.consumibles) {
+            String clave = (item.getId() != null && !item.getId().isBlank())
+                    ? item.getId().toUpperCase()
+                    : item.getNombre().toUpperCase();
+            if (!idsVistos.contains(clave)) {
+                idsVistos.add(clave);
+                unicos.add(item);
+            }
+        }
+        return unicos;
+    }
+
     public boolean alternarEquipadoAccesorio(String idAccesorio) {
         Item objetivo = null;
         for (Item prenda : armario) {

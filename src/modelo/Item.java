@@ -216,6 +216,10 @@ public class Item {
         );
     }
 
+    public static LinkedList<Item> crearCatalogoTienda() {
+        return obtenerCatalogoTienda();
+    }
+
     public static LinkedList<Item> obtenerCatalogoTienda() {
         LinkedList<Item> catalogo = new LinkedList<>();
 
@@ -231,6 +235,10 @@ public class Item {
                 "PERRO_CALIENTE", "Perro Caliente", "+50 Hambre, +10 Felicidad",
                 CategoriaItem.COMIDA, 25,
                 50, 0, 0, 10, 0, 0, 0, "item_perro_caliente.png", 1.0));
+        catalogo.add(crearConsumible(
+                "HELADO", "Helado Artesanal", "+30 Felicidad, +10 Hambre",
+                CategoriaItem.COMIDA, 14,
+                10, 0, 0, 30, 0, 0, 0, "item_helado.png", 1.0));
 
         catalogo.add(crearConsumible(
                 "CAFE", "Café Clásico", "+30 Energía",
@@ -254,6 +262,10 @@ public class Item {
                 "KIT_FICHAS", "Kit de Fichas", "+25 Inteligencia, +20 XP",
                 CategoriaItem.ACADEMICO, 30,
                 0, 0, 0, 0, 0, 25, 20, "item_kit_fichas.png", 1.0));
+        catalogo.add(crearConsumible(
+                "PELOTA", "Pelota Tadeísta", "+45 Felicidad, -5 Energía",
+                CategoriaItem.ACADEMICO, 18,
+                0, -5, 0, 45, 0, 0, 0, "item_pelota.png", 1.0));
 
         return catalogo;
     }
@@ -263,23 +275,23 @@ public class Item {
         armario.add(crearAccesorio(
                 "ACC_CARNE", "Carné Estudiantil",
                 "Se desbloquea al alcanzar el Nivel 1.",
-                false, false, "acc_carne.png", 115, 105, 0.35));
+                false, false, "acc_carne.png", 115, 120, 0.35));
         armario.add(crearAccesorio(
                 "ACC_GORRA", "Gorra de la Universidad",
                 "Se desbloquea al comprar 5 veces en la Tienda.",
-                false, false, "acc_gorra.png", 38, -55, 0.75));
+                false, false, "acc_gorra.png", 60, -55, 0.6));
         armario.add(crearAccesorio(
                 "ACC_GAFAS", "Gafas Intelectuales",
                 "Se desbloquea al llegar a 80 de Inteligencia.",
-                false, false, "acc_gafas.png", 75, -10, 0.50));
+                false, false, "acc_gafas.png", 75, 10, 0.5));
         armario.add(crearAccesorio(
                 "ACC_BUZO", "Buzo Tadeísta",
                 "Se desbloquea al acumular 3 Victorias en cualquier minijuego.",
-                false, false, "acc_buzo.png", 57, 90, 0.62));
+                false, false, "acc_buzo.png", -19, -13, 1.135));
         armario.add(crearAccesorio(
                 "ACC_BIRRETE", "Birrete de Grado",
                 "Se desbloquea al alcanzar el Nivel 4.",
-                false, false, "acc_birrete.png", 30, -90, 0.80));
+                false, false, "acc_birrete.png", 60, -55, 0.6));
         return armario;
     }
 

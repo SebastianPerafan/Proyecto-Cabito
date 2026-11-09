@@ -12,8 +12,10 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Polygon;
 import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
@@ -110,12 +112,18 @@ public class PanelTienda extends JPanel {
     }
 
     private boolean esItemCafeteriaOEnergia(String nombre, String descripcion) {
-        String texto = ((nombre != null ? nombre : "") + " " + (descripcion != null ? descripcion : "")).toLowerCase();
+        String nom = (nombre != null ? nombre : "").toLowerCase();
+        if (nom.contains("pelota") || nom.contains("juguete")) {
+            return false;
+        }
+        String texto = (nom + " " + (descripcion != null ? descripcion.toLowerCase() : ""));
         return texto.contains("hambre")
                 || texto.contains("energ")
                 || texto.contains("manzana")
                 || texto.contains("sopa")
                 || texto.contains("perro")
+                || texto.contains("helado")
+                || texto.contains("galleta")
                 || texto.contains("caf");
     }
 
@@ -474,6 +482,80 @@ public class PanelTienda extends JPanel {
                 );
                 g2.setColor(DORADO_MONEDAS);
                 g2.fill(rayo);
+            } else if (clave.contains("pelota") || clave.contains("juguete")) {
+                int r = 25;
+                Ellipse2D.Float circuloPelota = new Ellipse2D.Float(cx - r, cy - r, r * 2, r * 2);
+
+                GradientPaint gpPelota = new GradientPaint(
+                        cx - r, cy - r, new Color(72, 122, 198),
+                        cx + r, cy + r, AZUL_PROFUNDO
+                );
+                g2.setPaint(gpPelota);
+                g2.fill(circuloPelota);
+
+                Shape clipAnterior = g2.getClip();
+                g2.clip(circuloPelota);
+
+                g2.setColor(DORADO_HUESO);
+                g2.setStroke(new BasicStroke(5.0f));
+                g2.drawArc(cx - r - 12, cy - r + 4, r * 2, r * 2, -45, 115);
+                g2.drawArc(cx - r + 12, cy - r - 4, r * 2, r * 2, 135, 115);
+
+                g2.setColor(new Color(255, 255, 255, 95));
+                g2.fillOval(cx - r + 6, cy - r + 5, 18, 11);
+
+                g2.setClip(clipAnterior);
+
+                Polygon estrella = crearEstrella(cx, cy, 12, 5);
+                g2.setColor(DORADO_MONEDAS);
+                g2.fill(estrella);
+                g2.setColor(AZUL_PROFUNDO);
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.draw(estrella);
+
+                g2.setColor(AZUL_PROFUNDO);
+                g2.setStroke(new BasicStroke(2.0f));
+                g2.draw(circuloPelota);
+            } else if (clave.contains("helado") || clave.contains("galleta")) {
+                Polygon cono = new Polygon(
+                        new int[]{cx - 15, cx + 15, cx},
+                        new int[]{cy + 1, cy + 1, cy + 28},
+                        3
+                );
+                GradientPaint gpCono = new GradientPaint(
+                        cx - 12, cy + 2, new Color(230, 172, 92),
+                        cx + 10, cy + 26, new Color(184, 120, 44)
+                );
+                g2.setPaint(gpCono);
+                g2.fill(cono);
+
+                g2.setColor(new Color(148, 92, 28));
+                g2.setStroke(new BasicStroke(1.3f));
+                g2.drawLine(cx - 9, cy + 6, cx + 4, cy + 19);
+                g2.drawLine(cx - 3, cy + 3, cx + 8, cy + 13);
+                g2.drawLine(cx + 9, cy + 6, cx - 4, cy + 19);
+                g2.drawLine(cx + 3, cy + 3, cx - 8, cy + 13);
+                g2.setStroke(new BasicStroke(1.6f));
+                g2.draw(cono);
+
+                g2.setColor(new Color(255, 130, 178));
+                g2.fillOval(cx - 20, cy - 15, 24, 21);
+                g2.setColor(new Color(255, 220, 105));
+                g2.fillOval(cx - 4, cy - 15, 24, 21);
+                g2.setColor(new Color(145, 225, 250));
+                g2.fillOval(cx - 13, cy - 26, 26, 22);
+
+                g2.setColor(AZUL_PROFUNDO);
+                g2.setStroke(new BasicStroke(1.4f));
+                g2.drawArc(cx - 20, cy - 15, 24, 21, 70, 210);
+                g2.drawArc(cx - 4, cy - 15, 24, 21, -100, 210);
+                g2.drawArc(cx - 13, cy - 26, 26, 22, 0, 180);
+
+                g2.setColor(new Color(224, 48, 62));
+                g2.fillOval(cx - 5, cy - 32, 10, 10);
+                g2.setColor(new Color(120, 30, 38));
+                g2.setStroke(new BasicStroke(1.3f));
+                g2.drawArc(cx - 1, cy - 38, 10, 10, 100, 90);
             } else {
                 g2.setColor(AZUL_GORRA_MEDIO);
                 g2.fillOval(cx - 22, cy - 22, 44, 44);
@@ -483,6 +565,18 @@ public class PanelTienda extends JPanel {
                 String inicial = !this.nombre.isBlank() ? this.nombre.substring(0, 1).toUpperCase() : "★";
                 g2.drawString(inicial, cx - fm.stringWidth(inicial) / 2, cy + 7);
             }
+        }
+
+        private static Polygon crearEstrella(int cx, int cy, int radioExt, int radioInt) {
+            Polygon estrella = new Polygon();
+            for (int i = 0; i < 10; i++) {
+                double angulo = Math.toRadians(-90 + i * 36);
+                int r = (i % 2 == 0) ? radioExt : radioInt;
+                int px = (int) Math.round(cx + r * Math.cos(angulo));
+                int py = (int) Math.round(cy + r * Math.sin(angulo));
+                estrella.addPoint(px, py);
+            }
+            return estrella;
         }
     }
 

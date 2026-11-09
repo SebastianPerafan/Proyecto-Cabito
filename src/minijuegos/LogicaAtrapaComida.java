@@ -7,13 +7,14 @@ import java.util.function.Consumer;
 
 public class LogicaAtrapaComida implements Minijuego {
 
-    public static final int ANCHO_TABLERO = 400;
-    public static final int ALTO_TABLERO = 400;
-    public static final int ALTURA_CAPTURA = 350;
-    public static final int RADIO_COLISION = 30;
-    public static final int DURACION_INICIAL_MILLIS = 30000;
-    public static final int PASO_MOVIMIENTO_CABITO = 20;
-    public static final int INTERVALO_MAXIMO_SPAWN_MILLIS = 700;
+    public static final int ANCHO_TABLERO = 800;
+    public static final int ALTO_TABLERO = 560;
+    public static final int ALTURA_CAPTURA = 435;
+    public static final int RADIO_COLISION = 58;
+    public static final int DURACION_INICIAL_MILLIS = 25000;
+    public static final int PASO_MOVIMIENTO_CABITO = 28;
+    public static final int INTERVALO_MAXIMO_SPAWN_MILLIS = 800;
+    public static final int META_PUNTAJE_VICTORIA = 800;
 
     private final LinkedList<ObjetoComida> comidasActivas;
     private int posicionXCabito;
@@ -97,14 +98,14 @@ public class LogicaAtrapaComida implements Minijuego {
         if (this.terminado) {
             return;
         }
-        this.posicionXCabito = Math.max(0, this.posicionXCabito - PASO_MOVIMIENTO_CABITO);
+        this.posicionXCabito = Math.max(48, this.posicionXCabito - PASO_MOVIMIENTO_CABITO);
     }
 
     public void moverDerecha() {
         if (this.terminado) {
             return;
         }
-        this.posicionXCabito = Math.min(ANCHO_TABLERO, this.posicionXCabito + PASO_MOVIMIENTO_CABITO);
+        this.posicionXCabito = Math.min(ANCHO_TABLERO - 48, this.posicionXCabito + PASO_MOVIMIENTO_CABITO);
     }
 
     public void actualizarTick(int deltaMillis) {
@@ -119,7 +120,7 @@ public class LogicaAtrapaComida implements Minijuego {
         }
 
         this.tiempoDesdeUltimoSpawnMillis += deltaMillis;
-        if (this.tiempoDesdeUltimoSpawnMillis >= INTERVALO_MAXIMO_SPAWN_MILLIS || random.nextInt(100) < 8) {
+        if (this.tiempoDesdeUltimoSpawnMillis >= INTERVALO_MAXIMO_SPAWN_MILLIS || random.nextInt(100) < 12) {
             generarNuevaComida();
             this.tiempoDesdeUltimoSpawnMillis = 0;
         }
@@ -129,10 +130,10 @@ public class LogicaAtrapaComida implements Minijuego {
             ObjetoComida comida = iterator.next();
             comida.setY(comida.getY() + comida.getVelocidadY());
 
-            if (comida.getY() >= ALTURA_CAPTURA && comida.getY() < ALTO_TABLERO) {
+            if (comida.getY() >= ALTURA_CAPTURA && comida.getY() <= ALTURA_CAPTURA + 80) {
                 int distanciaX = Math.abs(comida.getX() - this.posicionXCabito);
                 if (distanciaX <= RADIO_COLISION) {
-                    this.puntaje += comida.getPuntos();
+                    this.puntaje = Math.max(0, this.puntaje + comida.getPuntos());
                     iterator.remove();
                     continue;
                 }
@@ -145,15 +146,15 @@ public class LogicaAtrapaComida implements Minijuego {
     }
 
     private void generarNuevaComida() {
-        int margen = 20;
+        int margen = 48;
         int coordenadaX = margen + random.nextInt(ANCHO_TABLERO - (margen * 2) + 1);
         int selector = random.nextInt(4);
 
         ObjetoComida nueva = switch (selector) {
-            case 0 -> new ObjetoComida(coordenadaX, 0, "Manzana", 10, 6);
-            case 1 -> new ObjetoComida(coordenadaX, 0, "Galleta", 10, 6);
-            case 2 -> new ObjetoComida(coordenadaX, 0, "Queso", 15, 8);
-            default -> new ObjetoComida(coordenadaX, 0, "Pez", 25, 10);
+            case 0 -> new ObjetoComida(coordenadaX, 72, "Manzana", 15, 6);
+            case 1 -> new ObjetoComida(coordenadaX, 72, "Galleta", 20, 7);
+            case 2 -> new ObjetoComida(coordenadaX, 72, "Queso", 25, 8);
+            default -> new ObjetoComida(coordenadaX, 72, "Pez", 35, 10);
         };
 
         this.comidasActivas.add(nueva);
@@ -165,8 +166,8 @@ public class LogicaAtrapaComida implements Minijuego {
         }
         this.terminado = true;
 
-        int monedas = Math.min(8, this.puntaje / 50);
-        boolean victoria = this.puntaje > 150;
+        int monedas = Math.min(8, this.puntaje / 100);
+        boolean victoria = this.puntaje >= META_PUNTAJE_VICTORIA;
         ResultadoMinijuego resultado = new ResultadoMinijuego(this.puntaje, monedas, 30, victoria, victoria);
 
         if (this.onTerminado != null) {
@@ -193,7 +194,7 @@ public class LogicaAtrapaComida implements Minijuego {
     }
 
     public void setPosicionXCabito(int posicionXCabito) {
-        this.posicionXCabito = Math.max(0, Math.min(ANCHO_TABLERO, posicionXCabito));
+        this.posicionXCabito = Math.max(48, Math.min(ANCHO_TABLERO - 48, posicionXCabito));
     }
 
     public int getPuntaje() {
@@ -208,4 +209,3 @@ public class LogicaAtrapaComida implements Minijuego {
         return (int) Math.ceil(this.tiempoRestanteMillis / 1000.0);
     }
 }
-

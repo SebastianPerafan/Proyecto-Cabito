@@ -8,7 +8,7 @@ public class LogicaMemoria implements Minijuego {
     public static final int FILAS = 4;
     public static final int COLUMNAS = 4;
     public static final int TOTAL_PAREJAS = 8;
-    public static final int INTENTOS_INICIALES = 14;
+    public static final int INTENTOS_INICIALES = 8;
 
     private static final String[] PALABRAS_CLAVE = {
         "Biblioteca",

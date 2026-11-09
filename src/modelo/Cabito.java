@@ -34,13 +34,13 @@ public class Cabito {
     }
 
     public void aplicarDesgasteCiclo() {
-        setHambre(this.hambre - 3);
-        setEnergia(this.energia - 2);
-        setHigiene(this.higiene - 2);
-        setFelicidad(this.felicidad - 2);
+        setHambre(this.hambre - 4);
+        setEnergia(this.energia - 3);
+        setHigiene(this.higiene - 3);
+        setFelicidad(this.felicidad - 3);
 
         if (this.hambre == 0 || this.higiene == 0) {
-            setSalud(this.salud - 5);
+            setSalud(this.salud - 6);
         }
 
         if (this.estadoActual == null || !this.estadoActual.esTemporal()) {
@@ -69,6 +69,13 @@ public class Cabito {
 
     public void actualizarEstadoAutomatico() {
         this.estadoActual = evaluarEstadoAutomatico();
+    }
+
+    public void modificarFelicidad(int cantidad) {
+        setFelicidad(this.felicidad + cantidad);
+        if (this.estadoActual == null || !this.estadoActual.esTemporal()) {
+            actualizarEstadoAutomatico();
+        }
     }
 
     public void aplicarConsumible(Item item) {

@@ -407,15 +407,25 @@ public class GestorArchivos {
         String idPrenda = col[1].trim();
         int offsetXPorDefecto = obtenerOffsetXPorDefecto(idPrenda);
         int offsetYPorDefecto = obtenerOffsetYPorDefecto(idPrenda);
-        int offsetX = (col.length >= 8) ? parseIntSeguro(col[7], offsetXPorDefecto) : offsetXPorDefecto;
-        int offsetY = (col.length >= 9) ? parseIntSeguro(col[8], offsetYPorDefecto) : offsetYPorDefecto;
+        double escalaPorDefecto = obtenerEscalaPorDefecto(idPrenda);
 
-        double escala = 1.0;
-        if (col.length >= 10 && !col[9].isBlank()) {
-            try {
-                escala = Double.parseDouble(col[9].trim());
-            } catch (NumberFormatException e) {
-                escala = 1.0;
+        int offsetX = offsetXPorDefecto;
+        int offsetY = offsetYPorDefecto;
+        double escala = escalaPorDefecto;
+
+        if (!tieneCalibracionOficial(idPrenda)) {
+            if (col.length >= 8) {
+                offsetX = parseIntSeguro(col[7], offsetXPorDefecto);
+            }
+            if (col.length >= 9) {
+                offsetY = parseIntSeguro(col[8], offsetYPorDefecto);
+            }
+            if (col.length >= 10 && !col[9].isBlank()) {
+                try {
+                    escala = Double.parseDouble(col[9].trim());
+                } catch (NumberFormatException e) {
+                    escala = escalaPorDefecto;
+                }
             }
         }
 
@@ -431,6 +441,18 @@ public class GestorArchivos {
                 escala
         );
         partida.getArmario().add(accesorio);
+    }
+
+    private boolean tieneCalibracionOficial(String idAccesorio) {
+        if (idAccesorio == null) {
+            return false;
+        }
+        String id = idAccesorio.trim().toUpperCase();
+        return id.equals("ACC_CARNE")
+                || id.equals("ACC_GORRA")
+                || id.equals("ACC_GAFAS")
+                || id.equals("ACC_BUZO")
+                || id.equals("ACC_BIRRETE");
     }
 
     private int obtenerOffsetXPorDefecto(String idAccesorio) {
@@ -449,6 +471,15 @@ public class GestorArchivos {
             }
         }
         return 0;
+    }
+
+    private double obtenerEscalaPorDefecto(String idAccesorio) {
+        for (Item base : Item.crearArmarioInicial()) {
+            if (base.getId().equalsIgnoreCase(idAccesorio)) {
+                return base.getEscala();
+            }
+        }
+        return 1.0;
     }
 
     private String unirCampos(String... campos) {
